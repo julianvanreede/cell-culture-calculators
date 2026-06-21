@@ -2,7 +2,7 @@
 
 Interactive tools for cell culture planning developed at Radboudumc.
 
-🔗 **[Open the calculators](https://jvr.github.io/cell-culture-calculators/)**
+🔗 **[Open the calculators](https://julianvanreede.github.io/cell-culture-calculators/)**
 
 ## License
 
