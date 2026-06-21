@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HL-1 Seeding Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4F6F3; --panel:#FFFFFF; --ink:#16201B; --muted:#646E68;
+    --faint:#909A93; --hair:#E1E6E0; --hair-strong:#CDD4CD;
+    --accent:#0F8B7D; --accent-soft:#E5F2F0; --mea:#0F8B7D; --mea-tint:#F0F7F5;
+    --warn:#C2491D;
+    --shadow:0 1px 2px rgba(22,32,27,.04), 0 6px 24px rgba(22,32,27,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+    line-height:1.5;padding:28px 16px 56px}
+  .wrap{max-width:580px;margin:0 auto}
+  h1{font-size:24px;font-weight:600;letter-spacing:-.01em;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13.5px;margin:0}
+
+  .panel{background:var(--panel);border:1px solid var(--hair);border-radius:11px;
+    box-shadow:var(--shadow);padding:18px;margin-top:16px}
+  .lab{font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.01em;display:block;margin-bottom:8px}
+  .lab .u{color:var(--faint);font-weight:400}
+
+  .inrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  input[type="number"]{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+    font-size:16px;color:var(--ink);background:var(--paper);border:1px solid var(--hair-strong);
+    border-radius:8px;padding:10px 12px;width:140px;transition:border-color .15s,box-shadow .15s}
+  input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  input::-webkit-inner-spin-button{opacity:.4}
+  select{font-family:"IBM Plex Sans",sans-serif;font-size:14px;color:var(--ink);background:var(--paper);
+    border:1px solid var(--hair-strong);border-radius:8px;padding:10px 11px;cursor:pointer}
+  select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .glue{font-size:13.5px;color:var(--muted)}
+
+  /* guideline chips */
+  .guide-lab{font-size:11px;color:var(--faint);margin:15px 0 8px;letter-spacing:.02em}
+  .chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-width:470px}
+  .chip{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink);
+    background:var(--paper);border:1px solid var(--hair-strong);border-radius:9px;
+    padding:12px 6px;cursor:pointer;transition:all .14s;text-align:center;line-height:1.2}
+  .chip .n{font-weight:600;color:var(--ink)}
+  .chip:hover{border-color:var(--accent)}
+  .chip.on{background:var(--accent);border-color:var(--accent)}
+  .chip.on .n{color:#fff}
+  .chip .r{display:block;font-size:10.5px;color:var(--accent);font-weight:500;margin-top:4px;
+    font-family:"IBM Plex Mono",monospace}
+  .chip.on .r{color:#fff}
+  .rf{font-size:.62em;color:var(--accent);font-weight:600;vertical-align:super;line-height:0;margin-left:1px}
+  .chip.on .rf{color:#fff}
+
+  .sources{margin-top:13px;display:flex;flex-direction:column;gap:5px}
+  .src-lab{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-bottom:1px}
+  .src{font-size:11.5px;color:var(--muted);text-decoration:none;line-height:1.45;width:fit-content;max-width:100%;
+    transition:color .14s}
+  .src:hover{color:var(--accent)}
+  .src .rf{margin-left:0;margin-right:2px}
+
+  .specmatch{display:none;margin-top:13px;
+    background:var(--accent-soft);border:1px solid var(--accent);border-radius:9px;
+    padding:10px 13px;font-size:11.5px;color:#0c6c61;line-height:1.45;
+    box-shadow:0 6px 18px rgba(15,139,125,.18);opacity:0;transform:translateY(-4px)}
+  .specmatch.show{display:block;animation:specpop .22s ease forwards}
+  .specmatch b{color:var(--accent);font-weight:600}
+  @keyframes specpop{to{opacity:1;transform:translateY(0)}}
+  @media (min-width:1280px){
+    #countPanel{position:relative}
+    .specmatch{position:absolute;top:30px;left:100%;margin-left:24px;margin-top:0;width:248px}
+    .specmatch::before{content:"";position:absolute;left:-7px;top:18px;width:12px;height:12px;
+      background:var(--accent-soft);border-left:1px solid var(--accent);border-bottom:1px solid var(--accent);
+      transform:rotate(45deg)}
+  }
+
+  .readout{margin-top:15px;padding-top:14px;border-top:1px solid var(--hair);
+    display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .readout .k{font-size:12.5px;color:var(--muted)}
+  .readout .v{font-family:"IBM Plex Mono",monospace;font-size:17px;font-weight:600;color:var(--accent)}
+  .readout .v .s2{font-size:12px;color:var(--faint);font-weight:400;margin-left:6px}
+
+  .timetable{width:100%;border-collapse:collapse;margin-top:13px}
+  .timetable td{padding:9px 0;border-bottom:1px solid var(--hair);font-size:12.5px;vertical-align:top}
+  .timetable tr:last-child td{border-bottom:none}
+  .timetable .tl{color:var(--muted);padding-right:14px}
+  .timetable .tv{text-align:right;white-space:nowrap;font-family:"IBM Plex Mono",monospace;
+    font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+  .timetable .tv.zero{color:var(--warn)}
+  .timenote{margin-top:8px;font-size:11px;color:var(--faint);line-height:1.5}
+
+  .derived{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--faint);margin-top:9px;line-height:1.8}
+  .derived b{color:var(--muted);font-weight:500}
+
+  .scrollx{overflow-x:auto;margin:0 -4px}
+  table{width:100%;border-collapse:collapse;margin-top:2px;min-width:470px}
+  thead th{font-size:11px;font-weight:600;color:var(--muted);text-align:right;padding:0 9px 9px;
+    letter-spacing:.02em;border-bottom:1.5px solid var(--hair-strong)}
+  thead th.l{text-align:left}
+  thead th .s{display:block;font-weight:400;color:var(--faint);font-size:9.5px;margin-top:1px;
+    font-family:"IBM Plex Mono",monospace}
+  tbody td{padding:12px 9px;text-align:right;border-bottom:1px solid var(--hair);font-size:14px}
+  tbody td.l{text-align:left}
+  tbody tr:last-child td{border-bottom:none}
+  .vn{font-weight:500;font-size:13.5px}
+  td.val{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+  td.vol{color:var(--accent);font-weight:600}
+  td.dens{color:var(--faint)}
+  td.conf{font-weight:600;color:var(--ink)}
+  td.conf.over{color:var(--warn)}
+  .dim{color:var(--faint)}
+  .foot{margin-top:14px;font-size:11.5px;color:var(--faint);line-height:1.6}
+  .foot b{color:var(--muted);font-weight:500}
+
+  @media (max-width:480px){
+    input[type="number"]{width:100%}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>HL-1 seeding calculator</h1>
+  <p class="sub">Fix one seeding density · seed every format to match.</p>
+
+  <!-- 1. CONCENTRATION / HARVEST (first) -->
+  <section class="panel" id="countPanel">
+    <label class="lab" for="conc">Counted suspension <span class="u">— harvested from one confluent 6-well, 1.5 mL total</span></label>
+    <div class="inrow">
+      <input type="number" id="conc" value="1000000" min="0" step="10000">
+      <span class="glue">cells / mL</span>
+    </div>
+    <div class="derived">
+      Total harvested: <b id="avail">—</b><br>
+      Confluent 6-well density: <b id="confDens">—</b>
+    </div>
+    <div class="specmatch" id="specMatch">
+      <b>✓ Harvest on spec.</b> At this confluent density the 65,000/cm² protocol seeding works out to a 1:3 split — your counted cell number matches the protocol's expected confluent yield.
+    </div>
+  </section>
+
+  <!-- 2. SEEDING DENSITY (chips follow) -->
+  <section class="panel" id="seedPanel">
+    <label class="lab">Seeding density <span class="u">— pick a guideline or set it by a reference well</span></label>
+
+    <p class="guide-lab">Literature guidelines for HL-1 on MEA — click to apply (cells / cm²):</p>
+    <div class="chips" id="chips"></div>
+    <div class="sources" id="sources"></div>
+
+    <div class="inrow" style="margin-top:14px">
+      <input type="number" id="refCount" value="250000" min="0" step="5000">
+      <span class="glue">cells on</span>
+      <select id="refWell">
+        <option value="283.5" selected>19 mm MEA well</option>
+        <option value="960">6-well</option>
+        <option value="380">12-well</option>
+      </select>
+    </div>
+
+    <div class="readout">
+      <span class="k">Target density</span>
+      <span class="v" id="density">—</span>
+    </div>
+    <table class="timetable">
+      <tr><td class="tl">Time to confluence</td><td class="tv" id="tConf">—</td></tr>
+      <tr><td class="tl">Time to monolayer-wide synchronized contraction</td><td class="tv" id="tSync">—</td></tr>
+    </table>
+    <p class="timenote">20 h doubling (fixed); synchronization adds ~24 h of coupling after confluence. Exponential model runs optimistic near confluence.</p>
+  </section>
+
+  <!-- TABLE -->
+  <section class="panel">
+    <div class="scrollx">
+      <table>
+        <thead>
+          <tr>
+            <th class="l">Well</th>
+            <th>Cells to seed<span class="s">per well</span></th>
+            <th>Pipette<span class="s">suspension</span></th>
+            <th>Density<span class="s">cells/mm²</span></th>
+            <th>Confluency<span class="s">at seeding</span></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="foot">Density and confluency are identical down every row — that's the consistency the matched-density approach buys you. <b>% confluency</b> = seeding density ÷ confluent density (your 6-well harvest). Cells &amp; volume scale with well area; top each well up with medium afterward.</p>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  var SIXWELL = 960; // mm²
+  var WELLS = [
+    {name:'6-well',         mm2:960,   cls:''},
+    {name:'12-well',        mm2:380,   cls:''},
+    {name:'19 mm MEA well', mm2:283.5, cls:'mea'}
+  ];
+  // guidelines: density-type (sourced cells/cm²) or ratio-type (sourced split rule)
+  var GUIDES = [
+    {type:'density', cm2:35000, tag:'grow-up', ref:1},
+    {type:'density', cm2:65000, tag:'Millipore · from 24-well count', ref:2},
+    {type:'ratio',   ratio:3,   tag:'recommended · avoids dedifferentiation', ref:2},
+    {type:'density', cm2:88000, tag:'250k on MEA', ref:3}
+  ];
+  // clickable sources for the guideline numbers
+  var SOURCES = [
+    {n:1, label:'35,000/cm² — HL-1 seeded on a poly-L-lysine-coated MEA; medium changed daily; recorded at 100% confluence after 4–5 DIV (Cerea et al., 2018)',
+          url:'https://arxiv.org/abs/1808.07682'},
+    {n:2, label:'Sigma/Millipore HL-1 protocol (Claycomb) — seed 125,000 cells per 24-well (≈65,000/cm²) onto gelatin/fibronectin-coated plates; change medium daily; cells must reach 100% confluence before use. Passage strictly at confluence at ≤1:3 to preserve the differentiated cardiac phenotype; higher ratios cause dedifferentiation.',
+          url:'https://www.sigmaaldrich.com/US/en/technical-documents/protocol/cell-culture-and-cell-culture-analysis/mammalian-cell-culture/hl-1-cells'},
+    {n:3, label:'250,000 cells on MEA (≈88,000/cm²) — ChR2-HL-1 seeded on fibronectin-coated MCS ThinMEA200/30iR-ITO (59 electrodes, 200 µm spacing); confluent and recording-ready in 24–48 h (Agladze et al., 2017)',
+          url:'https://pubs.rsc.org/en/content/articlelanding/2017/bm/c7bm00171a'}
+  ];
+
+  var refCount = 250000, refArea = 283.5, conc = 1000000;
+  var DOUBLING = 20;      // h, fixed doubling time
+  var COUPLING = 24;      // h, monolayer coupling lag after confluence
+  var $ = function(id){return document.getElementById(id);};
+  function confDensMm2(){ return conc>0 ? (conc*1.5)/SIXWELL : 0; } // cells/mm² at confluence
+  function fmtHours(hrs){
+    if(!isFinite(hrs)) return '—';
+    if(hrs<=0) return '~now';
+    var h=Math.round(hrs);
+    if(hrs>=48){ var d=Math.round(hrs/24*10)/10; return '\u2248 '+whole(h)+' h ('+d+' days)'; }
+    return '\u2248 '+whole(h)+' h';
+  }
+
+  // ---- formatting: fully written-out integers, no scientific notation ----
+  function whole(n){ return (!isFinite(n)||n<0)?'—':Math.round(n).toLocaleString('en-US'); }
+  function vol(mL){
+    if(!isFinite(mL)||mL<=0) return '<span class="dim">—</span>';
+    var uL=mL*1000;
+    return uL<1000 ? Math.round(uL)+' <span class="dim">µL</span>'
+                   : (Math.round(mL*1000)/1000).toLocaleString('en-US')+' <span class="dim">mL</span>';
+  }
+  function pct(p){
+    if(!isFinite(p)||p<=0) return '—';
+    if(p<1) return '<1%';
+    return Math.round(p)+'%';
+  }
+
+  // ---- build guideline chips ----
+  function buildChips(){
+    var html='';
+    GUIDES.forEach(function(g){
+      var head = (g.type==='ratio') ? '1:'+g.ratio : whole(g.cm2);
+      var attrs = (g.type==='ratio') ? 'data-type="ratio" data-ratio="'+g.ratio+'" data-ref="'+(g.ref||0)+'"'
+                                     : 'data-type="density" data-cm2="'+g.cm2+'"';
+      html += '<button class="chip" '+attrs+'>'
+            + '<span class="n">'+head+(g.ref?'<sup class="rf">'+g.ref+'</sup>':'')+'</span>'
+            + '<span class="r"></span>'
+            + '</button>';
+    });
+    $('chips').innerHTML = html;
+    $('chips').querySelectorAll('.chip').forEach(function(b){
+      b.addEventListener('click', function(){
+        if(this.dataset.type==='ratio'){
+          var cd = confDensMm2();
+          if(cd<=0) return;                       // need a counted suspension first
+          refCount = Math.round((cd/parseFloat(this.dataset.ratio)) * refArea);
+        } else {
+          refCount = Math.round((parseFloat(this.dataset.cm2)/100) * refArea);
+        }
+        $('refCount').value = refCount;
+        render();
+      });
+    });
+  }
+
+  function buildSources(){
+    var html='<span class="src-lab">Sources</span>';
+    SOURCES.forEach(function(s){
+      html += '<a class="src" href="'+s.url+'" target="_blank" rel="noopener">'
+            + '<sup class="rf">'+s.n+'</sup> '+s.label+' \u2197</a>';
+    });
+    $('sources').innerHTML = html;
+  }
+
+  function syncChips(seedDens, confDens){
+    $('chips').querySelectorAll('.chip').forEach(function(b){
+      var target;
+      if(b.dataset.type==='ratio'){
+        target = confDens>0 ? confDens/parseFloat(b.dataset.ratio) : NaN;
+      } else {
+        target = parseFloat(b.dataset.cm2)/100;
+      }
+      var on = isFinite(target) && target>0 && Math.abs(seedDens-target)/target < 0.03;
+      b.classList.toggle('on', on);
+    });
+  }
+
+  function render(){
+    var seedDens = (refCount>0 && refArea>0) ? refCount/refArea : 0;  // cells/mm²
+    var seedCm2  = seedDens*100;
+    var confDens = confDensMm2();                                    // cells/mm² at confluence
+
+    $('density').innerHTML = seedDens>0
+      ? whole(seedDens)+' <span class="s2">cells/mm² · '+whole(seedCm2)+' /cm²</span>'
+      : '—';
+
+    $('avail').innerHTML  = conc>0 ? whole(conc*1.5)+' cells' : '—';
+    $('confDens').innerHTML = confDens>0
+      ? whole(confDens)+' cells/mm² <span class="dim">('+whole(confDens*100)+' /cm²)</span>'
+      : '—';
+
+    var p = (confDens>0) ? seedDens/confDens*100 : NaN;
+
+    // timing: confluence (exponential, 20 h doubling), then +coupling lag for synchronization
+    var tcEl=$('tConf'), tsEl=$('tSync');
+    tcEl.classList.remove('zero'); tsEl.classList.remove('zero');
+    if(confDens>0 && seedDens>0){
+      var tConf, tSync;
+      if(seedDens>=confDens){ tConf=0; tSync=COUPLING; tcEl.classList.add('zero'); }
+      else { tConf = DOUBLING*(Math.log(confDens/seedDens)/Math.log(2)); tSync = tConf+COUPLING; }
+      tcEl.textContent = fmtHours(tConf);
+      tsEl.textContent = fmtHours(tSync);
+    } else {
+      tcEl.textContent='—'; tsEl.textContent='—';
+    }
+
+    var html='';
+    WELLS.forEach(function(w){
+      var c = seedDens*w.mm2;
+      var v = conc>0 ? c/conc : NaN;
+      var over = (p>100) ? ' over' : '';
+      html += '<tr class="'+w.cls+'">'
+        + '<td class="l"><span class="vn">'+w.name+'</span></td>'
+        + '<td class="val">'+whole(c)+'</td>'
+        + '<td class="val vol">'+vol(v)+'</td>'
+        + '<td class="val dens">'+whole(seedDens)+'</td>'
+        + '<td class="val conf'+over+'">'+pct(p)+'</td>'
+        + '</tr>';
+    });
+    $('tbody').innerHTML = html;
+
+    syncChips(seedDens, confDens);
+
+    // spec-match: does the 65,000/cm² protocol seeding coincide with a 1:3 split here?
+    var d13 = confDens>0 ? (confDens*100)/3 : 0;          // 1:3 resulting density, cells/cm²
+    var onSpec = d13>0 && Math.abs(d13-65000)/65000 < 0.12;
+    $('specMatch').classList.toggle('show', onSpec);
+
+    // chip dynamic subtext: density → implied split ratio; ratio → resulting density
+    $('chips').querySelectorAll('.chip').forEach(function(b){
+      var rEl = b.querySelector('.r'); if(!rEl) return;
+      if(confDens<=0){ rEl.textContent=''; return; }
+      if(b.dataset.type==='ratio'){
+        var dCm2 = Math.round((confDens/parseFloat(b.dataset.ratio))*100);
+        b.querySelector('.n').innerHTML = (confDens>0 ? whole(dCm2) : '—')
+          + (b.dataset.ref ? '<sup class="rf">'+b.dataset.ref+'</sup>' : '');
+        rEl.textContent = '1:'+b.dataset.ratio+' (locked)';
+      } else {
+        var ratio = confDens / (parseFloat(b.dataset.cm2)/100);
+        rEl.textContent = ratio>=1.05 ? '\u2248 1:'+ratio.toFixed(1)+' split' : '\u2248 confluent';
+      }
+    });
+  }
+
+  $('refCount').addEventListener('input', function(){ refCount=parseFloat(this.value)||0; render(); });
+  $('refWell').addEventListener('change', function(){ refArea=parseFloat(this.value)||0; render(); });
+  $('conc').addEventListener('input', function(){ conc=parseFloat(this.value)||0; render(); });
+
+  buildChips();
+  buildSources();
+  render();
+})();
+</script>
+</body>
+</html>
