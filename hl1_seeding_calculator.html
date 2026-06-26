@@ -93,6 +93,21 @@
   .timenote{margin-top:8px;font-size:11px;color:var(--faint);line-height:1.5}
 
   .derived{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--faint);margin-top:9px;line-height:1.8}
+  .harvest-gauge{margin-top:16px}
+  .gauge-bar{position:relative;height:8px;border-radius:5px;
+    background:linear-gradient(90deg,
+      #C7D0CA 0%,#C7D0CA 17.6%,
+      #5FBEAF 17.6%,#5FBEAF 44.1%,
+      #1F9E8D 44.1%,#1F9E8D 81.2%,
+      #E0A33E 81.2%,#C2491D 100%)}
+  .gauge-marker{position:absolute;top:50%;left:40%;width:3px;height:18px;background:var(--ink);
+    border:1.5px solid #fff;border-radius:2px;transform:translate(-50%,-50%);
+    box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .25s ease}
+  .gauge-legend{position:relative;height:13px;margin-top:6px}
+  .gauge-legend span{position:absolute;transform:translateX(-50%);
+    font-family:"IBM Plex Mono",monospace;font-size:9.5px;color:var(--faint)}
+  .harvest-status{margin-top:11px;font-size:12px;line-height:1.45;font-weight:500}
+  .st-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle}
   .derived b{color:var(--muted);font-weight:500}
 
   .scrollx{overflow-x:auto;margin:0 -4px}
@@ -132,14 +147,29 @@
     <label class="lab" for="conc">Counted suspension <span class="u">— harvested from one confluent 6-well, 1.5 mL total</span></label>
     <div class="inrow">
       <input type="number" id="conc" value="1000000" min="0" step="10000">
-      <span class="glue">cells / mL</span>
+      <span class="glue">cells / mL (total)</span>
+    </div>
+    <div class="inrow" style="margin-top:10px">
+      <input type="number" id="viab" value="95" min="0" max="100" step="1">
+      <span class="glue">% viability</span>
     </div>
     <div class="derived">
       Total harvested: <b id="avail">—</b><br>
+      Viable (used for seeding): <b id="viableCells">—</b><br>
       Confluent 6-well density: <b id="confDens">—</b>
     </div>
+    <div class="harvest-gauge">
+      <div class="gauge-bar"><span class="gauge-marker" id="gaugeMarker"></span></div>
+      <div class="gauge-legend">
+        <span style="left:9%">sub</span>
+        <span style="left:31%">initial</span>
+        <span style="left:63%">full</span>
+        <span style="left:91%">over</span>
+      </div>
+      <div class="harvest-status" id="harvestStatus">—</div>
+    </div>
     <div class="specmatch" id="specMatch">
-      <b>✓ Harvest on spec.</b> At this confluent density the 65,000/cm² protocol seeding works out to a 1:3 split — your counted cell number matches the protocol's expected confluent yield.
+      <b>✓ Harvest at full confluency.</b> Your counted density falls within the measured fully-coupled monolayer range (2,842 ± 655 cells/mm²) — the densest synchronized state, ideal for recording.
     </div>
   </section>
 
@@ -147,7 +177,7 @@
   <section class="panel" id="seedPanel">
     <label class="lab">Seeding density <span class="u">— pick a guideline or set it by a reference well</span></label>
 
-    <p class="guide-lab">Literature guidelines for HL-1 on MEA — click to apply (cells / cm²):</p>
+    <p class="guide-lab">Literature guidelines for HL-1 on MEA — click to apply (cells / mm²):</p>
     <div class="chips" id="chips"></div>
     <div class="sources" id="sources"></div>
 
@@ -169,7 +199,7 @@
       <tr><td class="tl">Time to confluence</td><td class="tv" id="tConf">—</td></tr>
       <tr><td class="tl">Time to monolayer-wide synchronized contraction</td><td class="tv" id="tSync">—</td></tr>
     </table>
-    <p class="timenote">20 h doubling (fixed); synchronization adds ~24 h of coupling after confluence. Exponential model runs optimistic near confluence.</p>
+    <p class="timenote">~50 h effective doubling, calibrated so a 1:3 split reaches confluence in ~3.3 days (matching the protocol's 3–4 day window) rather than the ~20 h log-phase rate, which only holds while cells are sparse. Synchronization adds ~24 h of coupling after confluence.</p>
   </section>
 
   <!-- TABLE -->
@@ -201,28 +231,29 @@
     {name:'12-well',        mm2:380,   cls:''},
     {name:'19 mm MEA well', mm2:283.5, cls:'mea'}
   ];
-  // guidelines: density-type (sourced cells/cm²) or ratio-type (sourced split rule)
+  // guidelines: density-type (sourced cells/mm²) or ratio-type (sourced split rule)
   var GUIDES = [
-    {type:'density', cm2:35000, tag:'grow-up', ref:1},
-    {type:'density', cm2:65000, tag:'Millipore · from 24-well count', ref:2},
+    {type:'density', mm2:350, tag:'grow-up', ref:1},
+    {type:'density', mm2:650, tag:'Millipore · from 24-well count', ref:2},
     {type:'ratio',   ratio:3,   tag:'recommended · avoids dedifferentiation', ref:2},
-    {type:'density', cm2:88000, tag:'250k on MEA', ref:3}
+    {type:'density', mm2:880, tag:'250k on MEA', ref:3}
   ];
   // clickable sources for the guideline numbers
   var SOURCES = [
-    {n:1, label:'35,000/cm² — HL-1 seeded on a poly-L-lysine-coated MEA; medium changed daily; recorded at 100% confluence after 4–5 DIV (Cerea et al., 2018)',
+    {n:1, label:'350/mm² — HL-1 seeded on a poly-L-lysine-coated MEA; medium changed daily; recorded at 100% confluence after 4–5 DIV (Cerea et al., 2018)',
           url:'https://arxiv.org/abs/1808.07682'},
-    {n:2, label:'Sigma/Millipore HL-1 protocol (Claycomb) — seed 125,000 cells per 24-well (≈65,000/cm²) onto gelatin/fibronectin-coated plates; change medium daily; cells must reach 100% confluence before use. Passage strictly at confluence at ≤1:3 to preserve the differentiated cardiac phenotype; higher ratios cause dedifferentiation.',
+    {n:2, label:'Sigma/Millipore HL-1 application note SCC065 (Claycomb), Fluo-8 spontaneous-contraction assay — seed ~125,000 cells per 24-well (≈650/mm², derived) onto gelatin/fibronectin-coated plates; change medium daily; reaches 100% confluence in ~3–4 days. General passaging rule: split strictly at confluence at ≤1:3, as higher ratios cause dedifferentiation.',
           url:'https://www.sigmaaldrich.com/US/en/technical-documents/protocol/cell-culture-and-cell-culture-analysis/mammalian-cell-culture/hl-1-cells'},
-    {n:3, label:'250,000 cells on MEA (≈88,000/cm²) — ChR2-HL-1 seeded on fibronectin-coated MCS ThinMEA200/30iR-ITO (59 electrodes, 200 µm spacing); confluent and recording-ready in 24–48 h (Agladze et al., 2017)',
+    {n:3, label:'250,000 cells on MEA (≈880/mm²) — ChR2-HL-1 seeded on fibronectin-coated MCS ThinMEA200/30iR-ITO (59 electrodes, 200 µm spacing); confluent and recording-ready in 24–48 h (Agladze et al., 2017)',
           url:'https://pubs.rsc.org/en/content/articlelanding/2017/bm/c7bm00171a'}
   ];
 
-  var refCount = 250000, refArea = 283.5, conc = 1000000;
-  var DOUBLING = 20;      // h, fixed doubling time
+  var refCount = 250000, refArea = 283.5, conc = 1000000, viab = 95;
+  var DOUBLING = 50;      // h, effective doubling (calibrated so 1:3 split → ~3.3 d confluence)
   var COUPLING = 24;      // h, monolayer coupling lag after confluence
   var $ = function(id){return document.getElementById(id);};
-  function confDensMm2(){ return conc>0 ? (conc*1.5)/SIXWELL : 0; } // cells/mm² at confluence
+  function viableConc(){ return conc>0 ? conc*(Math.max(0,Math.min(100,viab))/100) : 0; } // live cells/mL
+  function confDensMm2(){ return viableConc()>0 ? (viableConc()*1.5)/SIXWELL : 0; } // cells/mm² at confluence
   function fmtHours(hrs){
     if(!isFinite(hrs)) return '—';
     if(hrs<=0) return '~now';
@@ -249,9 +280,9 @@
   function buildChips(){
     var html='';
     GUIDES.forEach(function(g){
-      var head = (g.type==='ratio') ? '1:'+g.ratio : whole(g.cm2);
+      var head = (g.type==='ratio') ? '1:'+g.ratio : whole(g.mm2);
       var attrs = (g.type==='ratio') ? 'data-type="ratio" data-ratio="'+g.ratio+'" data-ref="'+(g.ref||0)+'"'
-                                     : 'data-type="density" data-cm2="'+g.cm2+'"';
+                                     : 'data-type="density" data-mm2="'+g.mm2+'"';
       html += '<button class="chip" '+attrs+'>'
             + '<span class="n">'+head+(g.ref?'<sup class="rf">'+g.ref+'</sup>':'')+'</span>'
             + '<span class="r"></span>'
@@ -265,7 +296,7 @@
           if(cd<=0) return;                       // need a counted suspension first
           refCount = Math.round((cd/parseFloat(this.dataset.ratio)) * refArea);
         } else {
-          refCount = Math.round((parseFloat(this.dataset.cm2)/100) * refArea);
+          refCount = Math.round(parseFloat(this.dataset.mm2) * refArea);
         }
         $('refCount').value = refCount;
         render();
@@ -288,7 +319,7 @@
       if(b.dataset.type==='ratio'){
         target = confDens>0 ? confDens/parseFloat(b.dataset.ratio) : NaN;
       } else {
-        target = parseFloat(b.dataset.cm2)/100;
+        target = parseFloat(b.dataset.mm2);
       }
       var on = isFinite(target) && target>0 && Math.abs(seedDens-target)/target < 0.03;
       b.classList.toggle('on', on);
@@ -297,21 +328,37 @@
 
   function render(){
     var seedDens = (refCount>0 && refArea>0) ? refCount/refArea : 0;  // cells/mm²
-    var seedCm2  = seedDens*100;
     var confDens = confDensMm2();                                    // cells/mm² at confluence
 
     $('density').innerHTML = seedDens>0
-      ? whole(seedDens)+' <span class="s2">cells/mm² · '+whole(seedCm2)+' /cm²</span>'
+      ? whole(seedDens)+' <span class="s2">cells/mm²</span>'
       : '—';
 
-    $('avail').innerHTML  = conc>0 ? whole(conc*1.5)+' cells' : '—';
+    var total = conc>0 ? conc*1.5 : 0;                 // total cells in 1.5 mL
+    var viableTotal = viableConc()*1.5;                // live cells in 1.5 mL
+    $('avail').innerHTML  = total>0 ? whole(total)+' cells <span class="dim">('+whole(conc)+'/mL × 1.5 mL)</span>' : '—';
+    $('viableCells').innerHTML = viableTotal>0 ? whole(viableTotal)+' cells' : '—';
     $('confDens').innerHTML = confDens>0
-      ? whole(confDens)+' cells/mm² <span class="dim">('+whole(confDens*100)+' /cm²)</span>'
+      ? whole(confDens)+' cells/mm²'
       : '—';
+
+    // harvest-freshness gauge — empirical confluency bands (total cells, 0.6M–4.0M scale)
+    var pos = total>0 ? Math.max(0, Math.min(100, ((total-600000)/3400000)*100)) : 26;
+    $('gaugeMarker').style.left = pos+'%';
+    var hs = $('harvestStatus');
+    function setStat(c,t){ hs.innerHTML='<span class="st-dot" style="background:'+c+'"></span><span style="color:'+c+'">'+t+'</span>'; }
+    if(total<=0)            setStat('var(--faint)','Enter a count to assess the harvest.');
+    else if(total<1200000)  setStat('#6f7d75','Sub-confluent — below initial confluency (~1,250 cells/mm²). Let the monolayer fill in before passaging.');
+    else if(total<2100000)  setStat('#1a8576','Initial confluency (~1,250 cells/mm²) — monolayer formed, with isolated and coupled contracting areas. Fine to passage; let it mature for full coupling.');
+    else if(total<=3360000) setStat('#0c6c61','Full confluency (~2,842 cells/mm²) — fully-coupled, synchronously contracting monolayer. Ideal density; passage at 1:3.');
+    else                    setStat('#C2491D','Beyond full confluency — overgrown. Dedifferentiation risk; passage at 1:3 and consider a fresh low-passage vial.');
+    if(total>0 && viab>0 && viab<85){
+      hs.innerHTML += '<br><span class="st-dot" style="background:#C2491D"></span><span style="color:#C2491D">Viability '+Math.round(viab)+'% — below ~85%; expect reduced attachment and patchy confluence.</span>';
+    }
 
     var p = (confDens>0) ? seedDens/confDens*100 : NaN;
 
-    // timing: confluence (exponential, 20 h doubling), then +coupling lag for synchronization
+    // timing: confluence (exponential, effective doubling), then +coupling lag for synchronization
     var tcEl=$('tConf'), tsEl=$('tSync');
     tcEl.classList.remove('zero'); tsEl.classList.remove('zero');
     if(confDens>0 && seedDens>0){
@@ -341,9 +388,9 @@
 
     syncChips(seedDens, confDens);
 
-    // spec-match: does the 65,000/cm² protocol seeding coincide with a 1:3 split here?
-    var d13 = confDens>0 ? (confDens*100)/3 : 0;          // 1:3 resulting density, cells/cm²
-    var onSpec = d13>0 && Math.abs(d13-65000)/65000 < 0.12;
+    // spec-match: is the harvest at the measured full-confluency density (2,842 ± 655 total cells/mm²)?
+    var totalDensity = total/SIXWELL;                    // total cells/mm² in a 6-well
+    var onSpec = totalDensity>=2187 && totalDensity<=3497;
     $('specMatch').classList.toggle('show', onSpec);
 
     // chip dynamic subtext: density → implied split ratio; ratio → resulting density
@@ -351,12 +398,12 @@
       var rEl = b.querySelector('.r'); if(!rEl) return;
       if(confDens<=0){ rEl.textContent=''; return; }
       if(b.dataset.type==='ratio'){
-        var dCm2 = Math.round((confDens/parseFloat(b.dataset.ratio))*100);
-        b.querySelector('.n').innerHTML = (confDens>0 ? whole(dCm2) : '—')
+        var dMm2 = Math.round(confDens/parseFloat(b.dataset.ratio));
+        b.querySelector('.n').innerHTML = (confDens>0 ? whole(dMm2) : '—')
           + (b.dataset.ref ? '<sup class="rf">'+b.dataset.ref+'</sup>' : '');
         rEl.textContent = '1:'+b.dataset.ratio+' (locked)';
       } else {
-        var ratio = confDens / (parseFloat(b.dataset.cm2)/100);
+        var ratio = confDens / parseFloat(b.dataset.mm2);
         rEl.textContent = ratio>=1.05 ? '\u2248 1:'+ratio.toFixed(1)+' split' : '\u2248 confluent';
       }
     });
@@ -365,6 +412,7 @@
   $('refCount').addEventListener('input', function(){ refCount=parseFloat(this.value)||0; render(); });
   $('refWell').addEventListener('change', function(){ refArea=parseFloat(this.value)||0; render(); });
   $('conc').addEventListener('input', function(){ conc=parseFloat(this.value)||0; render(); });
+  $('viab').addEventListener('input', function(){ viab=parseFloat(this.value); if(isNaN(viab))viab=0; render(); });
 
   buildChips();
   buildSources();
